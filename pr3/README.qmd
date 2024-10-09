@@ -40,8 +40,147 @@ format: md
 
 Установим пакет nycflights13: ![](../img/img3_1.png)
 
-Подключим пакет:
+Подключим пакеты:
 
 ```{r}
+library(dplyr)
 library(nycflights13)
 ```
+
+### Шаг 2
+
+#### 1. Сколько встроенных в пакет nycflights13 датафреймов?
+
+5 пакетов: flights - все рейсы, вылетевшие из Нью-Йорка в 2013 году, weather - почасовые метеорологические данные для каждого аэропорта, planes - информация о конструкции каждого самолета, airports - названия и расположение аэропортов, airlines - перевод двух буквенных кодов и названий перевозчиков.
+
+#### 2. Сколько строк в каждом датафрейме?
+
+```{r}
+flights %>% nrow()
+```
+```{r}
+weather %>% nrow()
+```
+```{r}
+planes %>% nrow()
+```
+```{r}
+airports %>% nrow()
+```
+```{r}
+airlines %>% nrow()
+```
+
+#### 3. Сколько столбцов в каждом датафрейме?
+
+```{r}
+flights %>% ncol()
+```
+```{r}
+weather %>% ncol()
+```
+```{r}
+planes %>% ncol()
+```
+```{r}
+airports %>% ncol()
+```
+```{r}
+airlines %>% ncol()
+```
+
+#### 4. Как просмотреть примерный вид датафрейма?
+
+```{r}
+flights %>% glimpse()
+```
+```{r}
+weather %>% glimpse()
+```
+```{r}
+planes %>% glimpse()
+```
+```{r}
+airports %>% glimpse()
+```
+```{r}
+airlines %>% glimpse()
+```
+
+#### 5. Сколько компаний-перевозчиков (carrier) учитывают эти наборы данных (представлено в наборах данных)?
+
+```{r}
+flights %>% 
+  filter(!is.na(carrier)) %>% 
+  select(carrier) %>%
+  n_distinct()
+```
+
+#### 6. Сколько рейсов принял аэропорт John F Kennedy Intl в мае?
+
+```{r}
+n <- airports %>% 
+  filter(name == "John F Kennedy Intl") %>%
+  select(faa)
+pull(n)
+```
+```{r}
+flights %>%
+  filter(origin == pull(n) & month == 5) %>%
+  nrow()
+```
+
+#### 7. Какой самый северный аэропорт?
+
+```{r}
+airports %>%
+  arrange(desc(lon)) %>%
+  slice(1)
+```
+
+#### 8. Какой аэропорт самый высокогорный (находится выше всех над уровнем моря)?
+
+```{r}
+airports %>%
+  arrange(desc(alt)) %>%
+  slice(1)
+```
+
+#### 9. Какие бортовые номера у самых старых самолетов?
+
+```{r}
+planes %>%
+  arrange(year) %>%
+  select(tailnum) %>%
+  head()
+```
+
+#### 10. Какая средняя температура воздуха была в сентябре в аэропорту John F Kennedy Intl (в градусах Цельсия).
+
+```{r}
+avg_temp_f <- weather %>%
+  filter(origin == pull(n) & month == 9) %>%
+  summarize(avg_temp = mean(temp)) %>%
+  pull(avg_temp)
+avg_temp_c <- (avg_temp_f - 32) / 1.8
+avg_temp_c
+```
+
+#### 11. Самолеты какой авиакомпании совершили больше всего вылетов в июне?
+
+```{r}
+car <- flights %>%
+  filter(month == 6) %>%
+  group_by(carrier) %>%
+  summarize("count" = n()) %>%
+  arrange(desc(count)) %>%
+  slice(1) %>%
+  select(carrier) %>%
+  pull()
+
+airlines %>%
+  filter(carrier == car) %>%
+  select(name)
+```
+
+#### 12. Самолеты какой авиакомпании задерживались чаще других в 2013 году?
