@@ -334,12 +334,32 @@ car <- flights %>%
 
 airlines %>%
   filter(carrier == car) %>%
-  select(name)
+  select(name) %>%
+  pull()
 ```
 
-    # A tibble: 1 × 1
-      name                 
-      <chr>                
-    1 United Air Lines Inc.
+    [1] "United Air Lines Inc."
 
 #### 12. Самолеты какой авиакомпании задерживались чаще других в 2013 году?
+
+``` r
+car <- flights %>%
+  filter(arr_delay > 0) %>%
+  group_by(carrier) %>%
+  summarize("count" = n()) %>%
+  arrange(desc(count)) %>%
+  slice(1) %>%
+  select(carrier) %>%
+  pull()
+
+airlines %>%
+  filter(carrier == car) %>%
+  select(name) %>%
+  pull()
+```
+
+    [1] "ExpressJet Airlines Inc."
+
+### Шаг 3
+
+Отчёт написан и оформлен
