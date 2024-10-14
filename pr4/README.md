@@ -81,7 +81,31 @@ FROM
 
 #### 2. Определите суммарный объем исходящего трафика
 
+``` sql
+SELECT SUM(bytes)
+FROM `yaqry1mdataset_p`
+WHERE 
+    (src NOT LIKE '12%' or src NOT LIKE '13%' or src NOT LIKE '14%')
+    AND
+    (dst LIKE '12%' or dst LIKE '13%' or dst LIKE '14%')
+;
+```
+
+![](../img/img4_9.png)
+
 #### 3. Определите суммарный объем входящего трафика
+
+``` sql
+SELECT SUM(bytes)
+FROM `yaqry1mdataset_p`
+WHERE 
+    (src LIKE '12%' or src LIKE '13%' or src LIKE '14%')
+    AND
+    (dst NOT LIKE '12%' or dst NOT LIKE '13%' or dst NOT LIKE '14%')
+;
+```
+
+![](../img/img4_8.png)
 
 ### Шаг 4
 
@@ -90,3 +114,5 @@ FROM
 ``` r
 'Готово'
 ```
+
+    [1] "Готово"
