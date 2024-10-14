@@ -58,6 +58,27 @@ SELECT * FROM `yaqry1mdataset_p` LIMIT 100;
 
 #### 1. Известно, что IP адреса внутренней сети начинаются с октетов, принадлежащих интервалу \[12-14\]. Определите количество хостов внутренней сети, представленных в датасете.
 
+``` sql
+SELECT
+   COUNT(DISTINCT(IP)) as IP
+FROM
+    (SELECT IP 
+    FROM (
+        SELECT DISTINCT(dst) as IP
+        FROM `yaqry1mdataset_p`
+        WHERE dst LIKE '12%' or dst LIKE '13%' or dst LIKE '14%'
+    )
+    UNION (
+        SELECT DISTINCT(src) as IP
+        FROM `yaqry1mdataset_p`
+        WHERE src LIKE '12%' or src LIKE '13%' or src LIKE '14%'
+    )
+    )
+;
+```
+
+![](../img/img4_7.png)
+
 #### 2. Определите суммарный объем исходящего трафика
 
 #### 3. Определите суммарный объем входящего трафика
@@ -65,3 +86,7 @@ SELECT * FROM `yaqry1mdataset_p` LIMIT 100;
 ### Шаг 4
 
 Отчёт написан и оформлен
+
+``` r
+'Готово'
+```
