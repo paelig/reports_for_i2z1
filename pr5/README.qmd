@@ -1,7 +1,7 @@
-|              |
-|--------------|
-| title: "PR5" |
-| format: md   |
+---
+title: "PR5"
+format: md
+---
 
 # Название
 
