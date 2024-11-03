@@ -22,22 +22,226 @@ format: md
 ## Общий план выполнения
 
 1.  Подготовка данных
-    1.  Импортируйте данные.
-    2.  Привести датасеты в вид “аккуратных данных”, преобразовать типы столбцов в соответствии с типом данных.
-    3.  Просмотрите общую структуру данных с помощью функции glimpse()
 2.  Анализ точки доступа
-    1.  Определить небезопасные точки доступа (без шифрования – OPN)
-    2.  Определить производителя для каждого обнаруженного устройства
-    3.  Выявить устройства, использующие последнюю версию протокола шифрования WPA3, и названия точек доступа, реализованных на этих устройствах
-    4.  Отсортировать точки доступа по интервалу времени, в течение которого они находились на связи, по убыванию.
-    5.  Обнаружить топ-10 самых быстрых точек доступа.
-    6.  Отсортировать точки доступа по частоте отправки запросов (beacons) в единицу времени по их убыванию.
 3.  Анализ данных клиента
-    1.  Определить производителя для каждого обнаруженного устройства
-    2.  Обнаружить устройства, которые НЕ рандомизируют свой MAC адрес
-    3.  Кластеризовать запросы от устройств к точкам доступа по их именам. Определить время появления устройства в зоне радиовидимости и время выхода его из нее.
-    4.  Оценить стабильность уровня сигнала внури кластера во времени. Выявить наиболее стабильный кластер.
+4.  Подготовить и написать отчёт.
+
+### Шаг 1 Подготовка данных
+
+Подключим необходимые пакеты.
 
 ```{r}
-1 + 1
+library(tidyverse)
+library(readr)
 ```
+
+Импортируем данные из файла в два датасета: access_points - точки доступа и client - данные клиентов.
+
+```{r}
+access_points <- read.csv(file="./P2_wifi_data.csv", nrows = 167)
+head(access_points)
+```
+
+```{r}
+client <- read.csv(file="./P2_wifi_data.csv", skip=169)
+head(client)
+```
+
+2.  Приведём датасеты в вид “аккуратных данных”, преобразовав типы столбцов в соответствии с типом данных.
+
+Аккуратные данные:
+
+-   Каждая переменная находиться в столбце
+
+-   Каждое наблюдение - это строка
+
+-   Каждое значение являеться ячейкой
+
+```{r}
+access_points <- access_points %>% 
+  mutate_at(vars(BSSID, Privacy, Cipher, Authentication, 
+                 LAN.IP, ESSID), trimws)%>%
+  mutate_at(vars(BSSID, Privacy, Cipher, Authentication, 
+                 LAN.IP, ESSID), na_if, "")
+
+access_points$First.time.seen <- 
+  as.POSIXct(access_points$First.time.seen, format = "%Y-%m-%d %H:%M:%S")
+access_points$Last.time.seen <- 
+  as.POSIXct(access_points$Last.time.seen, format = "%Y-%m-%d %H:%M:%S")
+
+head(access_points)
+```
+
+```{r}
+client <- client %>% 
+  mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), trimws) %>%
+  mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), na_if, "")
+
+client$First.time.seen <- 
+  as.POSIXct(client$First.time.seen, format = "%Y-%m-%d %H:%M:%S")
+client$Last.time.seen <- 
+  as.POSIXct(client$Last.time.seen, format = "%Y-%m-%d %H:%M:%S")
+
+head(client)
+```
+
+3.  Просмотрим общую структуру данных с помощью функции glimpse()
+
+```{r}
+glimpse(access_points)
+```
+
+```{r}
+glimpse(client)
+```
+
+### Шаг 2 Анализ точки доступа
+
+1.  Определить небезопасные точки доступа (без шифрования – OPN)
+
+```{r}
+unsafe_points <- access_points %>% 
+  filter(Privacy == 'OPN') %>% 
+  select(BSSID)  %>% 
+  unique()
+
+unsafe_points
+```
+
+2.  Определить производителя для каждого обнаруженного устройства
+
+```{r}
+producer <- sapply(unsafe_points, function(i) substr(i, 1, 8)) %>% unique()
+
+producer
+```
+
+-   E8:28:C1 - Eltex Enterprise Ltd.
+
+-   00:25:00 - Apple, Inc.
+
+-   E0:D9:E3 - Eltex Enterprise Ltd.
+
+-   00:26:99 - Cisco Systems, Inc
+
+-   00:03:7A - Taiyo Yuden Co., Ltd.
+
+-   00:03:7F - Atheros Communications, Inc.
+
+3.  Выявить устройства, использующие последнюю версию протокола шифрования WPA3, и названия точек доступа, реализованных на этих устройствах
+
+```{r}
+access_points %>%
+  filter(str_detect(access_points$Privacy, 'WPA3') == TRUE) %>% 
+  select(BSSID, ESSID, Privacy)
+```
+
+4.  Отсортировать точки доступа по интервалу времени, в течение которого они находились на связи, по убыванию.
+
+```{r}
+access_points %>%
+  mutate(t = difftime(Last.time.seen, First.time.seen)) %>%
+  arrange(desc(t)) %>%
+  select(BSSID, t) %>%
+  head(10)
+```
+
+5.  Обнаружить топ-10 самых быстрых точек доступа.
+
+```{r}
+access_points %>%
+  arrange(desc(Speed)) %>% 
+  select(BSSID, Speed) %>% 
+  head(10)
+```
+
+6.  Отсортировать точки доступа по частоте отправки запросов (beacons) в единицу времени по их убыванию.
+
+```{r}
+access_points %>%
+  mutate(Time = difftime(Last.time.seen, First.time.seen)) %>%
+  filter(Time != 0) %>%
+  arrange(Time) %>%
+  filter(X..beacons != 0) %>%
+  mutate(BeaconsBySec = X..beacons / as.integer(Time)) %>%
+  arrange(desc(BeaconsBySec)) %>%
+  select(BSSID, X..beacons, Time, BeaconsBySec) %>%
+  head()
+```
+
+### Шаг 3 Анализ данных клиентов
+
+1.  Определить производителя для каждого обнаруженного устройства
+
+```{r}
+producer <- client %>%
+  select(BSSID) %>%
+  filter(BSSID != "(not associated)")%>%
+  filter(!is.na(BSSID)) %>%
+  arrange(BSSID) %>%
+  unique()
+
+sapply(producer, function(i) substr(i, 1, 8)) %>% unique() 
+```
+
+-   00:03:7F Atheros Communications, Inc.
+
+-   00:0D:97 Hitachi Energy USA Inc.
+
+-   00:23:EB Cisco Systems, Inc
+
+-   00:25:00 Apple, Inc.
+
+-   00:26:99 Cisco Systems, Inc
+
+-   08:3A:2F Guangzhou Juan Intelligent Tech Joint Stock Co.,Ltd
+
+-   0C:80:63 Tp-Link Technologies Co.,Ltd.
+
+-   DC:09:4C Huawei Technologies Co.,Ltd
+
+-   E0:D9:E3 Eltex Enterprise Ltd.
+
+-   E8:28:C1 Eltex Enterprise Ltd.
+
+2.  Обнаружить устройства, которые НЕ рандомизируют свой MAC адрес
+
+``` {r}
+client %>% 
+  filter(!grepl("^02|^06|^0A|^0E", BSSID)) %>% 
+  filter(BSSID != '(not associated)') %>%
+  select(BSSID) %>%
+  head()
+```
+
+3.  Кластеризовать запросы от устройств к точкам доступа по их именам. Определить время появления устройства в зоне радиовидимости и время выхода его из нее.
+
+```{r}
+client %>%
+  filter(!is.na(Probed.ESSIDs)) %>%
+  group_by(Probed.ESSIDs) %>%
+  summarise(Emergence = min(First.time.seen), Exit = max(Last.time.seen)) %>%
+  select(Probed.ESSIDs, Emergence, Exit) %>%
+  head(10)
+```
+
+4.  Оценить стабильность уровня сигнала внури кластера во времени. Выявить наиболее стабильный кластер.
+
+```{r}
+client %>%
+  mutate(t = as.integer(difftime(Last.time.seen, First.time.seen))) %>%
+  filter(t != 0) %>%
+  arrange(desc(t)) %>% 
+  filter(!is.na(Probed.ESSIDs)) %>% 
+  group_by(Probed.ESSIDs) %>%
+  summarise(Mean = mean(t), Sd = sd(t)) %>%
+  filter(!is.na(Sd)) %>%
+  filter(Sd != 0) %>%
+  arrange(Sd) %>%
+  select(Probed.ESSIDs, Mean, Sd) %>%
+  head(1)
+```
+
+### Шаг 4
+
+Отчёт написани и оформлен.
