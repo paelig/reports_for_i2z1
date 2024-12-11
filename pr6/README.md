@@ -55,8 +55,9 @@
 
 ### Шаг 4
 
-Составим дашборды Ссылка на готовый дашборд:
-https://datalens.yandex.cloud/vgf2m2lyfxp8i
+Составим дашборды
+
+Ссылка на готовый дашборд: https://datalens.yandex.cloud/vgf2m2lyfxp8i
 
 ### Шаг 5
 
